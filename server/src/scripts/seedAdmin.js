@@ -1,0 +1,3 @@
+import 'dotenv/config'; import bcrypt from 'bcryptjs'; import {connectDB} from '../config/db.js'; import User from '../models/User.js';
+if(!process.env.ADMIN_EMAIL||!process.env.ADMIN_PASSWORD||process.env.ADMIN_PASSWORD==='ChangeThisAdmin123!'){console.error('Set ADMIN_EMAIL and a new ADMIN_PASSWORD in .env first.');process.exit(1);}
+await connectDB();const email=process.env.ADMIN_EMAIL.toLowerCase();const hash=await bcrypt.hash(process.env.ADMIN_PASSWORD,12);const admin=await User.findOneAndUpdate({email},{name:process.env.ADMIN_NAME||'ParkEasy Admin',email,password:hash,role:'admin'},{upsert:true,new:true,setDefaultsOnInsert:true});console.log(`Admin ready: ${admin.email}`);process.exit(0);

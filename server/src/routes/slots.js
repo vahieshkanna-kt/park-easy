@@ -1,0 +1,5 @@
+import { Router } from 'express'; import Slot from '../models/Slot.js'; import Booking from '../models/Booking.js'; import {protect,adminOnly} from '../middleware/auth.js';
+const router=Router();router.use(protect,adminOnly);
+router.put('/:id',async(req,res,next)=>{try{const {status,vehicleType,code}=req.body;const slot=await Slot.findById(req.params.id);if(!slot)return res.status(404).json({message:'Slot not found.'});if(status && status!=='available' && await Booking.exists({slot:slot._id,status:'confirmed'}))return res.status(409).json({message:'This slot has an active booking.'});Object.assign(slot,{...(status&&{status}),...(vehicleType&&{vehicleType}),...(code&&{code})});await slot.save();res.json(slot);}catch(e){next(e);}});
+router.delete('/:id',async(req,res,next)=>{try{if(await Booking.exists({slot:req.params.id,status:'confirmed'}))return res.status(409).json({message:'Cannot delete a slot with an active booking.'});const s=await Slot.findByIdAndDelete(req.params.id);if(!s)return res.status(404).json({message:'Slot not found.'});res.json({message:'Slot deleted.'});}catch(e){next(e);}});
+export default router;

@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import Location from '../models/Location.js'; import Slot from '../models/Slot.js';
+import { protect, adminOnly } from '../middleware/auth.js';
+const router=Router();
+router.get('/', async(req,res,next)=>{try{const locations=await Location.find({isActive:true}).sort({createdAt:-1}).lean(); const ids=locations.map(x=>x._id); const slots=await Slot.find({location:{$in:ids}}).lean(); res.json(locations.map(l=>({...l,slots:slots.filter(s=>String(s.location)===String(l._id))})));}catch(e){next(e);}});
+router.post('/',protect,adminOnly,async(req,res,next)=>{try{const {name,address,city,hourlyRate,description}=req.body;if(!name||!address||!city||hourlyRate===undefined)return res.status(400).json({message:'Name, address, city and hourly rate are required.'});res.status(201).json(await Location.create({name,address,city,hourlyRate:Number(hourlyRate),description}));}catch(e){next(e);}});
+router.put('/:id',protect,adminOnly,async(req,res,next)=>{try{const l=await Location.findByIdAndUpdate(req.params.id,req.body,{new:true,runValidators:true});if(!l)return res.status(404).json({message:'Location not found.'});res.json(l);}catch(e){next(e);}});
+router.delete('/:id',protect,adminOnly,async(req,res,next)=>{try{const used=await Slot.exists({location:req.params.id});if(used)return res.status(409).json({message:'Delete its slots before deleting this location.'});const l=await Location.findByIdAndDelete(req.params.id);if(!l)return res.status(404).json({message:'Location not found.'});res.json({message:'Location deleted.'});}catch(e){next(e);}});
+router.post('/:id/slots',protect,adminOnly,async(req,res,next)=>{try{const {code,vehicleType='Any'}=req.body;if(!code?.trim())return res.status(400).json({message:'Slot code is required.'});if(!await Location.exists({_id:req.params.id}))return res.status(404).json({message:'Location not found.'});res.status(201).json(await Slot.create({location:req.params.id,code,vehicleType}));}catch(e){next(e);}});
+export default router;
